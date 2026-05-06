@@ -10,6 +10,7 @@ type OrderRepository interface {
 	Create(order *domain.Order) error
 	FindByID(id uint64) (*domain.Order, error)
 	FindByOrderNo(orderNo string) (*domain.Order, error)
+	FindByEnrollmentID(enrollmentID uint64) (*domain.Order, error)
 	FindByUserID(userID uint64, page, pageSize int) ([]domain.Order, int64, error)
 	UpdateStatus(id uint64, status string) error
 	UpdateStatusFromPending(id uint64, status string) (bool, error)
@@ -39,6 +40,14 @@ func (r *orderRepository) FindByID(id uint64) (*domain.Order, error) {
 func (r *orderRepository) FindByOrderNo(orderNo string) (*domain.Order, error) {
 	var order domain.Order
 	if err := r.db.Where("order_no = ?", orderNo).First(&order).Error; err != nil {
+		return nil, err
+	}
+	return &order, nil
+}
+
+func (r *orderRepository) FindByEnrollmentID(enrollmentID uint64) (*domain.Order, error) {
+	var order domain.Order
+	if err := r.db.Where("enrollment_id = ?", enrollmentID).First(&order).Error; err != nil {
 		return nil, err
 	}
 	return &order, nil

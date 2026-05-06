@@ -896,6 +896,30 @@ erDiagram
 
 ---
 
+#### `POST /enrollments/:id/cancel` — 取消报名（排队/未支付）
+
+| 属性 | 说明 |
+|---|---|
+| **认证** | Need Bearer Token |
+| **支持状态** | `QUEUING` 或 `SUCCESS + PENDING` 订单 |
+| **副作用** | 关闭未支付订单并回补库存；排队中报名直接回补库存 |
+
+**响应 200：**
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "enrollment_id": 100156,
+    "status": "CANCELLED"
+  }
+}
+```
+
+**响应 400：** 当前状态不可取消（如已支付/已关闭）
+
+---
+
 #### `GET /enrollments` — 我的报名记录列表
 
 | 属性 | 说明 |

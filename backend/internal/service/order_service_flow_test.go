@@ -33,6 +33,10 @@ func (s *stubOrderRepo) FindByOrderNo(orderNo string) (*domain.Order, error) {
 	return nil, gorm.ErrRecordNotFound
 }
 
+func (s *stubOrderRepo) FindByEnrollmentID(enrollmentID uint64) (*domain.Order, error) {
+	return nil, gorm.ErrRecordNotFound
+}
+
 func (s *stubOrderRepo) FindByUserID(userID uint64, page, pageSize int) ([]domain.Order, int64, error) {
 	return nil, 0, nil
 }

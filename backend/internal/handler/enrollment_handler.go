@@ -118,3 +118,27 @@ func (h *EnrollmentHandler) List(c *gin.Context) {
 
 	response.Paginated(c, enrollments, total, page, pageSize)
 }
+
+// Cancel handles POST /api/v1/enrollments/:id/cancel.
+func (h *EnrollmentHandler) Cancel(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "无效的报名 ID")
+		return
+	}
+
+	userID := getUserID(c)
+	if err := h.svc.Cancel(c.Request.Context(), id, userID); err != nil {
+		switch err {
+		case service.ErrEnrollNotFound:
+			response.NotFound(c, "报名记录不存在")
+		case service.ErrEnrollNotCancelable:
+			response.BadRequest(c, "当前状态不可取消")
+		default:
+			response.InternalError(c, "取消报名失败")
+		}
+		return
+	}
+
+	response.Success(c, gin.H{"enrollment_id": id, "status": "CANCELLED"})
+}

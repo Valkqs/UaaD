@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -31,6 +32,7 @@ type stubEnrollmentService struct {
 	lastEnrollmentID uint64
 	lastPage         int
 	lastPageSize     int
+	cancelErr        error
 }
 
 func (s *stubEnrollmentService) Create(userID, activityID uint64) (*service.EnrollResult, error) {
@@ -59,6 +61,12 @@ func (s *stubEnrollmentService) ListByUser(userID uint64, page, pageSize int) ([
 		return nil, 0, s.listErr
 	}
 	return s.listResult, s.listTotal, nil
+}
+
+func (s *stubEnrollmentService) Cancel(ctx context.Context, enrollmentID, userID uint64) error {
+	s.lastEnrollmentID = enrollmentID
+	s.lastUserID = userID
+	return s.cancelErr
 }
 
 // ── Test Cases ──────────────────────────────────────────────────────────────

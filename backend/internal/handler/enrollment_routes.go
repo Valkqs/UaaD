@@ -11,6 +11,7 @@ func RegisterEnrollmentRoutes(v1 *gin.RouterGroup, h *EnrollmentHandler, jwtSecr
 	enrollments := v1.Group("/enrollments", middleware.JWTAuth(jwtSecret))
 	{
 		enrollments.POST("", h.Create)
+		enrollments.POST("/:id/cancel", h.Cancel)
 		enrollments.GET("", h.List)
 		enrollments.GET("/:id/status", h.GetStatus)
 	}

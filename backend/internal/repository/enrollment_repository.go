@@ -11,6 +11,7 @@ type EnrollmentRepository interface {
 	FindByID(id uint64) (*domain.Enrollment, error)
 	FindByUserAndActivity(userID, activityID uint64) (*domain.Enrollment, error)
 	UpdateStatus(id uint64, status string) error
+	UpdateStatusFromQueuing(id, userID uint64, status string) (bool, error)
 	ListByUserID(userID uint64, page, pageSize int) ([]domain.Enrollment, int64, error)
 	ListByActivityID(activityID uint64, status string) ([]domain.Enrollment, error)
 }
@@ -50,6 +51,19 @@ func (r *enrollmentRepository) UpdateStatus(id uint64, status string) error {
 			"status":       status,
 			"finalized_at": gorm.Expr("CURRENT_TIMESTAMP"),
 		}).Error
+}
+
+func (r *enrollmentRepository) UpdateStatusFromQueuing(id, userID uint64, status string) (bool, error) {
+	res := r.db.Model(&domain.Enrollment{}).
+		Where("id = ? AND user_id = ? AND status = ?", id, userID, "QUEUING").
+		Updates(map[string]interface{}{
+			"status":       status,
+			"finalized_at": gorm.Expr("CURRENT_TIMESTAMP"),
+		})
+	if res.Error != nil {
+		return false, res.Error
+	}
+	return res.RowsAffected == 1, nil
 }
 
 func (r *enrollmentRepository) ListByUserID(userID uint64, page, pageSize int) ([]domain.Enrollment, int64, error) {

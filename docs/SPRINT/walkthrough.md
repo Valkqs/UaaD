@@ -231,6 +231,23 @@ docker compose up -d
 - 通过：`go test`（选定用例）
   - `backend/internal/service/order_service_flow_test.go`
   - `backend/internal/service/order_service_test.go`
+
+## 2026-05-06 · 后端闭环收口（Batch 3）
+
+### 变更概览
+- 新增报名取消接口：支持 `QUEUING` 直接取消与 `SUCCESS + PENDING` 订单取消。
+- 取消流程统一通过乐观锁更新订单状态，成功后回补库存并更新报名为 `CANCELLED`。
+- 同步 SRS 与系统设计文档，补齐取消能力与 API 契约。
+
+### Diff 思路
+- 先对报名记录做状态判断，再走 `PENDING -> CLOSED` 条件更新，避免与支付/超时扫描并发重复回补。
+- 对 `CANCELLED` 走幂等路径，避免重复取消报错。
+
+### 验证结果
+- 通过：`go test`（选定用例）
+  - `backend/internal/service/enrollment_cancel_test.go`
+  - `backend/internal/service/order_service_flow_test.go`
+  - `backend/internal/service/order_service_test.go`
   - 新增 §9 常见问题排查（10 类典型问题及解决步骤）。
 
 ### Diff 思路
