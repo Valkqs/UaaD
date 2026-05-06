@@ -762,10 +762,7 @@ erDiagram
     "status": "SELLING_OUT",
     "enroll_count": 67234,
     "stock_remaining": 12766,
-    "created_by": {
-      "user_id": 10,
-      "username": "相信音乐"
-    }
+    "created_by": 10
   }
 }
 ```
@@ -788,8 +785,7 @@ erDiagram
   "data": {
     "activity_id": 3,
     "stock_remaining": 12766,
-    "max_capacity": 80000,
-    "last_updated": "2026-04-10T10:05:32Z"
+    "max_capacity": 80000
   }
 }
 ```

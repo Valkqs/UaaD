@@ -248,6 +248,20 @@ docker compose up -d
   - `backend/internal/service/enrollment_cancel_test.go`
   - `backend/internal/service/order_service_flow_test.go`
   - `backend/internal/service/order_service_test.go`
+
+## 2026-05-06 · 后端闭环收口（Batch 4）
+
+### 变更概览
+- 新增 `/api/v1/health` 健康探针别名，和验收文档保持一致。
+- 对齐系统设计文档中活动详情与库存响应示例，避免与实际响应不一致。
+
+### Diff 思路
+- 在现有 `/health` 基础上提供版本化别名，避免文档与实现分叉。
+- 文档示例以代码为准，减少前后端联调误判。
+
+### 验证结果
+- 通过：`go test`（选定用例）
+  - `backend/internal/handler/activity_handler_test.go`
   - 新增 §9 常见问题排查（10 类典型问题及解决步骤）。
 
 ### Diff 思路
