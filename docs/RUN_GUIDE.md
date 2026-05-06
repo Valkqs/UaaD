@@ -163,6 +163,7 @@ go run ./cmd/server
 ```
 
 启动成功标志：终端输出 `Server starting on :8080`。
+停止服务时使用 `Ctrl+C`（或发送 `SIGTERM`）可触发优雅关闭：HTTP 先停止接入，再依次释放 Kafka / Redis / MySQL 连接。
 
 **健康检查：**
 

@@ -5,7 +5,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -30,6 +32,8 @@ func main() {
 	_ = godotenv.Load("../.env")
 
 	cfg := config.Load()
+	appCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	db, err := gorm.Open(gormmysql.Open(cfg.MySQLDSN()), &gorm.Config{})
 	if err != nil {
@@ -144,43 +148,63 @@ func main() {
 
 	// ── Enrollment Worker (Kafka consumer → MySQL) ───────────────────
 	enrollWorker := worker.NewEnrollmentWorker(kafkaReader, db, stockEngine, notifSvc, activityRepo)
-	go enrollWorker.Run(context.Background())
+	go enrollWorker.Run(appCtx)
 
 	// ── Order Expiry Scanner (every 5 minutes) ─────────────────────────
 	go func() {
-		ticker := time.NewTicker(5 * time.Minute)
-		defer ticker.Stop()
-		for range ticker.C {
+		runPeriodic(appCtx, 5*time.Minute, func(context.Context) {
 			closed, err := orderSvc.ScanExpired()
 			if err != nil {
 				log.Printf("[OrderExpiry] scan error: %v", err)
 			} else if closed > 0 {
 				log.Printf("[OrderExpiry] closed %d expired orders, stock rolled back", closed)
 			}
-		}
+		})
 	}()
 
 	// ── Recommendation Score Recalculation ──────────────────────────────
 	go func() {
-		if err := recommendSvc.RecalculateAllScores(context.Background()); err != nil {
-			log.Printf("[RecommendScore] initial recalc error: %v", err)
-		}
-
 		interval := time.Duration(cfg.ScoreRecalcIntervalMinutes) * time.Minute
 		if interval <= 0 {
 			interval = 30 * time.Minute
 		}
-		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
-		for range ticker.C {
-			if err := recommendSvc.RecalculateAllScores(context.Background()); err != nil {
+		runPeriodicWithInitial(appCtx, interval, func(ctx context.Context) {
+			if err := recommendSvc.RecalculateAllScores(ctx); err != nil {
 				log.Printf("[RecommendScore] periodic recalc error: %v", err)
 			}
+		})
+	}()
+
+	server := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: r,
+	}
+
+	go func() {
+		<-appCtx.Done()
+		log.Println("shutdown signal received, stopping services...")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			log.Printf("http server shutdown error: %v", err)
 		}
 	}()
 
 	log.Printf("Server starting on :%s", cfg.Port)
-	if err := r.Run(":" + cfg.Port); err != nil {
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("failed to run server: %v", err)
+	}
+
+	if err := kafkaWriter.Close(); err != nil {
+		log.Printf("kafka writer close error: %v", err)
+	}
+	if err := kafkaReader.Close(); err != nil {
+		log.Printf("kafka reader close error: %v", err)
+	}
+	if err := rdb.Close(); err != nil {
+		log.Printf("redis close error: %v", err)
+	}
+	if err := sqlDB.Close(); err != nil {
+		log.Printf("mysql close error: %v", err)
 	}
 }
