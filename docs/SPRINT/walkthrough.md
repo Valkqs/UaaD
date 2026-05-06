@@ -198,6 +198,24 @@ docker compose up -d
   - 新增 §5.3 Mock 策略对照表，明确联调/验收阶段必须关闭 Mock。
   - 新增 §6 Prometheus / Grafana 完整说明（数据源 provisioning、Dashboard 面板布局 5 行 12 面板、指标端点验证命令）。
   - 新增 §8 完整启动流程速查（从零拉起 + 日常开发两套 checklist）。
+
+## 2026-05-06 · 后端闭环收口（Batch 1）
+
+### 变更概览
+- 报名链路改为先落库 `QUEUING`，再投递 Kafka；返回值包含 `enrollment_id` 与 `queue_position`，便于前端轮询。
+- Enrollment Worker 改为更新已存在的报名记录为 `SUCCESS`，创建订单并递增 `activities.enroll_count`，避免重复入库；非 `QUEUING` 状态消息直接跳过。
+- 库存查询改为 Redis 优先：新增 `StockEngine.GetStock`，`/activities/:id/stock` 与详情页库存读取 Redis，异常时回退 DB 审计值。
+- 更新通知接线文档与报名接口示例，移除未实现的 `estimated_wait_seconds` 字段。
+
+### Diff 思路
+- 先解决排队 ID 丢失的问题（报名记录缺失会导致无法轮询），再让 Worker 基于 `enrollment_id` 完成幂等落盘。
+- Redis 是实时库存的真来源，API 以 Redis 值为主，DB 仅作为审计回退。
+
+### 验证结果
+- 通过：`go test`（选定用例）
+  - `backend/internal/service/stock_lua_test.go`
+  - `backend/internal/handler/activity_handler_test.go`
+  - `backend/internal/handler/enrollment_handler_test.go`
   - 新增 §9 常见问题排查（10 类典型问题及解决步骤）。
 
 ### Diff 思路

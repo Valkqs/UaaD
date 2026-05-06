@@ -25,6 +25,9 @@ type StockEngine interface {
 	//   >0 → queue position (success)
 	TryEnroll(ctx context.Context, activityID, userID uint64) (queuePos int64, err error)
 
+	// GetStock returns current remaining stock from Redis.
+	GetStock(ctx context.Context, activityID uint64) (int, error)
+
 	// Rollback compensates a previous TryEnroll: increments stock by 1 and
 	// removes the user from the enrolled set. Used by order-expiry and
 	// MySQL-failure compensation paths.
@@ -108,6 +111,10 @@ func (e *redisStockEngine) TryEnroll(ctx context.Context, activityID, userID uin
 	default:
 		return result, nil
 	}
+}
+
+func (e *redisStockEngine) GetStock(ctx context.Context, activityID uint64) (int, error) {
+	return e.rdb.Get(ctx, stockKey(activityID)).Int()
 }
 
 func (e *redisStockEngine) Rollback(ctx context.Context, activityID, userID uint64) error {

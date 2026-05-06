@@ -829,8 +829,7 @@ erDiagram
   "data": {
     "enrollment_id": 100156,
     "status": "QUEUING",
-    "queue_position": 3482,
-    "estimated_wait_seconds": 30
+    "queue_position": 3482
   }
 }
 ```
@@ -876,8 +875,7 @@ erDiagram
     "activity_title": "五月天 2026 巡回演唱会·上海站",
     "status": "QUEUING",
     "queue_position": 2103,
-    "submitted_at": "2026-04-10T10:00:03Z",
-    "estimated_wait_seconds": 15
+    "submitted_at": "2026-04-10T10:00:03Z"
   }
 }
 ```
@@ -1135,8 +1133,8 @@ erDiagram
 
 | 方法 | `type` | `related_id` | 当前调用关系 |
 |---|---|---|---|
-| `NotifyEnrollSuccess(userID, enrollmentID, activityTitle)` | `ENROLL_SUCCESS` | `enrollments.id` | **待接入**：在 `EnrollmentService.Create` 事务提交成功后调用（当前报名主流程未注入通知）。 |
-| `NotifyEnrollFail(userID, enrollmentID, activityTitle)` | `ENROLL_FAIL` | `enrollments.id` | **待接入**：报名/抢票失败、冲正等路径中调用。 |
+| `NotifyEnrollSuccess(userID, enrollmentID, activityTitle)` | `ENROLL_SUCCESS` | `enrollments.id` | **已接入**：Enrollment Worker 落盘成功后写入。 |
+| `NotifyEnrollFail(userID, enrollmentID, activityTitle)` | `ENROLL_FAIL` | `enrollments.id` | **已接入**：Enrollment Worker 事务失败/补偿路径写入。 |
 | `NotifyOrderExpire(userID, orderID, activityTitle)` | `ORDER_EXPIRE` | `orders.id` | **待接入**：订单过期关单（如 `ScanExpired`）之后调用。 |
 | `NotifyActivityReminder(userID, activityID, activityTitle)` | `ACTIVITY_REMINDER` | `activities.id` | **待接入**：活动提醒定时任务或活动侧逻辑中调用。 |
 

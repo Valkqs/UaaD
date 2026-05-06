@@ -123,6 +123,25 @@ func TestStockEngine_Rollback(t *testing.T) {
 	}
 }
 
+func TestStockEngine_GetStock(t *testing.T) {
+	rdb := testRedisClient(t)
+	engine := NewStockEngine(rdb)
+	ctx := context.Background()
+
+	const activityID uint64 = 9006
+	if err := engine.WarmUp(ctx, activityID, 12); err != nil {
+		t.Fatalf("warmup: %v", err)
+	}
+
+	remaining, err := engine.GetStock(ctx, activityID)
+	if err != nil {
+		t.Fatalf("GetStock: %v", err)
+	}
+	if remaining != 12 {
+		t.Errorf("stock should be 12, got %d", remaining)
+	}
+}
+
 func TestStockEngine_Concurrent(t *testing.T) {
 	rdb := testRedisClient(t)
 	engine := NewStockEngine(rdb)

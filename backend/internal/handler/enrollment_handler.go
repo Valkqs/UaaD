@@ -90,6 +90,9 @@ func (h *EnrollmentHandler) GetStatus(c *gin.Context) {
 		"status":        enrollment.Status,
 		"submitted_at":  enrollment.EnrolledAt,
 	}
+	if enrollment.QueuePosition != nil {
+		data["queue_position"] = *enrollment.QueuePosition
+	}
 	if activity != nil {
 		data["activity_title"] = activity.Title
 	}

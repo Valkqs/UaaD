@@ -247,9 +247,13 @@ func (s *activityService) Stock(id uint64) (int, int, error) {
 	if err != nil {
 		return 0, 0, ErrActivityNotFound
 	}
-	remaining := activity.MaxCapacity - int(activity.EnrollCount)
-	if remaining < 0 {
-		remaining = 0
+
+	remaining, err := s.stockEngine.GetStock(context.Background(), id)
+	if err != nil {
+		remaining = activity.MaxCapacity - int(activity.EnrollCount)
+		if remaining < 0 {
+			remaining = 0
+		}
 	}
 	return remaining, activity.MaxCapacity, nil
 }

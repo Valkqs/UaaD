@@ -397,6 +397,8 @@ func TestActivityHandler_Detail_OK(t *testing.T) {
 			MaxCapacity: 100,
 			EnrollCount: 30,
 		},
+		stockRemaining:   70,
+		stockMaxCapacity: 100,
 	}
 	h := NewActivityHandler(stub)
 

@@ -111,8 +111,25 @@ func (s *enrollmentService) Create(userID, activityID uint64) (*EnrollResult, er
 		return nil, err
 	}
 
+	queuePosInt := int(queuePos)
+	enrollment := &domain.Enrollment{
+		UserID:        userID,
+		ActivityID:    activityID,
+		Status:        "QUEUING",
+		QueuePosition: &queuePosInt,
+		EnrolledAt:    now,
+	}
+	if err := s.enrollRepo.Create(enrollment); err != nil {
+		s.rollbackRedis(ctx, activityID, userID)
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, ErrAlreadyEnrolled
+		}
+		return nil, err
+	}
+
 	// 3. Produce to Kafka — Worker will handle MySQL persistence
 	msg := EnrollmentMessage{
+		EnrollmentID: enrollment.ID,
 		UserID:     userID,
 		ActivityID: activityID,
 		QueuePos:   queuePos,
@@ -122,6 +139,7 @@ func (s *enrollmentService) Create(userID, activityID uint64) (*EnrollResult, er
 	payload, err := json.Marshal(msg)
 	if err != nil {
 		s.rollbackRedis(ctx, activityID, userID)
+		_ = s.enrollRepo.UpdateStatus(enrollment.ID, "FAILED")
 		return nil, fmt.Errorf("marshal enrollment message: %w", err)
 	}
 
@@ -131,10 +149,12 @@ func (s *enrollmentService) Create(userID, activityID uint64) (*EnrollResult, er
 	})
 	if err != nil {
 		s.rollbackRedis(ctx, activityID, userID)
+		_ = s.enrollRepo.UpdateStatus(enrollment.ID, "FAILED")
 		return nil, fmt.Errorf("kafka produce: %w", err)
 	}
 
 	return &EnrollResult{
+		EnrollmentID:  enrollment.ID,
 		Status:        "QUEUING",
 		QueuePosition: queuePos,
 	}, nil

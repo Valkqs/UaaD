@@ -145,9 +145,12 @@ func (h *ActivityHandler) Detail(c *gin.Context) {
 		return
 	}
 
-	remaining := activity.MaxCapacity - int(activity.EnrollCount)
-	if remaining < 0 {
-		remaining = 0
+	remaining, _, err := h.svc.Stock(id)
+	if err != nil {
+		remaining = activity.MaxCapacity - int(activity.EnrollCount)
+		if remaining < 0 {
+			remaining = 0
+		}
 	}
 
 	response.Success(c, gin.H{
