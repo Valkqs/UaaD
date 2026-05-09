@@ -82,7 +82,7 @@ func main() {
 	notifSvc := service.NewNotificationService(notifRepo)
 	enrollmentSvc := service.NewEnrollmentService(db, stockEngine, kafkaWriter, enrollmentRepo, activityRepo, orderRepo)
 	orderSvc := service.NewOrderService(orderRepo, activityRepo, stockEngine, notifSvc)
-	behaviorSvc := service.NewBehaviorService(behaviorRepo)
+	behaviorSvc := service.NewBehaviorService(behaviorRepo, activityRepo)
 	recommendSvc := service.NewRecommendationService(recommendRepo, cfg.Scoring, 5*time.Minute)
 	stockReconciler := service.NewStockReconciler(activityRepo, enrollmentRepo, stockEngine, 200)
 	activityOfflineJob := service.NewActivityOfflineJob(db)

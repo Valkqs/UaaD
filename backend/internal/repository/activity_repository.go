@@ -24,6 +24,7 @@ type ActivityRepository interface {
 	FindByMerchantID(merchantID uint64) ([]domain.Activity, error)
 	DeductStock(activityID uint64) (int64, error)
 	IncrementStock(activityID uint64) error
+	IncrementViewCount(activityID uint64) error
 }
 
 type activityRepository struct {
@@ -130,4 +131,14 @@ func (r *activityRepository) IncrementStock(activityID uint64) error {
 	return r.db.Model(&domain.Activity{}).
 		Where("id = ? AND enroll_count > 0", activityID).
 		Update("enroll_count", gorm.Expr("enroll_count - 1")).Error
+}
+
+// IncrementViewCount atomically increases activities.view_count by 1.
+// Best-effort: callers (e.g. behavior service for VIEW events) should not
+// fail their main flow when this errors. SPRINT3 §三 task 8 wires this into
+// the recommendation hot-score pipeline.
+func (r *activityRepository) IncrementViewCount(activityID uint64) error {
+	return r.db.Model(&domain.Activity{}).
+		Where("id = ?", activityID).
+		UpdateColumn("view_count", gorm.Expr("view_count + 1")).Error
 }

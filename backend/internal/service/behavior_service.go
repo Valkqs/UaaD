@@ -39,12 +39,28 @@ type BehaviorService interface {
 }
 
 type behaviorService struct {
-	repo repository.BehaviorRepository
+	repo         repository.BehaviorRepository
+	activityRepo repository.ActivityRepository // optional: drives view_count for hot-score (SPRINT3 §三 task 8)
 }
 
 // NewBehaviorService creates a BehaviorService.
-func NewBehaviorService(repo repository.BehaviorRepository) BehaviorService {
-	return &behaviorService{repo: repo}
+//
+// Pass a non-nil activityRepo to wire VIEW behaviors into activities.view_count
+// — required for the recommendation hot-score pipeline. nil disables that
+// integration (kept for tests that only care about behavior persistence).
+func NewBehaviorService(repo repository.BehaviorRepository, activityRepo repository.ActivityRepository) BehaviorService {
+	return &behaviorService{repo: repo, activityRepo: activityRepo}
+}
+
+// bumpViewCount runs activityRepo.IncrementViewCount for VIEW events.
+// Best-effort: errors are logged but do not fail the behavior write.
+func (s *behaviorService) bumpViewCount(b *domain.UserBehavior) {
+	if s.activityRepo == nil || b.BehaviorType != "VIEW" {
+		return
+	}
+	if err := s.activityRepo.IncrementViewCount(b.ActivityID); err != nil {
+		log.Printf("[behavior] increment view_count failed activity=%d: %v", b.ActivityID, err)
+	}
 }
 
 func validateAndToDomain(userID uint64, item BehaviorSubmit) (*domain.UserBehavior, error) {
@@ -86,11 +102,17 @@ func (s *behaviorService) Submit(userID uint64, async bool, item BehaviorSubmit)
 			}()
 			if err := s.repo.Create(&clone); err != nil {
 				log.Printf("[behavior] async create: %v", err)
+				return
 			}
+			s.bumpViewCount(&clone)
 		}()
 		return nil
 	}
-	return s.repo.Create(b)
+	if err := s.repo.Create(b); err != nil {
+		return err
+	}
+	s.bumpViewCount(b)
+	return nil
 }
 
 func (s *behaviorService) SubmitBatch(userID uint64, async bool, items []BehaviorSubmit) error {
@@ -122,9 +144,19 @@ func (s *behaviorService) SubmitBatch(userID uint64, async bool, items []Behavio
 			}()
 			if err := s.repo.BatchCreate(list); err != nil {
 				log.Printf("[behavior] async batch create: %v", err)
+				return
+			}
+			for _, b := range list {
+				s.bumpViewCount(b)
 			}
 		}(cp)
 		return nil
 	}
-	return s.repo.BatchCreate(rows)
+	if err := s.repo.BatchCreate(rows); err != nil {
+		return err
+	}
+	for _, b := range rows {
+		s.bumpViewCount(b)
+	}
+	return nil
 }
