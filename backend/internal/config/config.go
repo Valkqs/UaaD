@@ -45,6 +45,7 @@ type Config struct {
 	Scoring                    ScoringWeights
 	ScoreRecalcIntervalMinutes int
 	StockReconcileMinutes      int
+	ActivityOfflineMinutes     int
 	BehaviorWriteAsync         bool
 	CORSAllowedOrigins         []string
 }
@@ -79,6 +80,7 @@ func Load() *Config {
 		},
 		ScoreRecalcIntervalMinutes: parseIntEnv("SCORE_RECALC_MINUTES", 30),
 		StockReconcileMinutes:      parseIntEnv("STOCK_RECONCILE_MINUTES", 10),
+		ActivityOfflineMinutes:     parseIntEnv("ACTIVITY_OFFLINE_MINUTES", 15),
 		BehaviorWriteAsync:         parseBoolEnv("BEHAVIOR_ASYNC_WRITE", true),
 		CORSAllowedOrigins:         parseCSVEnv("CORS_ALLOWED_ORIGINS"),
 	}

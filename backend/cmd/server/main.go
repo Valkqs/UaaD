@@ -85,6 +85,7 @@ func main() {
 	behaviorSvc := service.NewBehaviorService(behaviorRepo)
 	recommendSvc := service.NewRecommendationService(recommendRepo, cfg.Scoring, 5*time.Minute)
 	stockReconciler := service.NewStockReconciler(activityRepo, enrollmentRepo, stockEngine, 200)
+	activityOfflineJob := service.NewActivityOfflineJob(db)
 
 	activityHandler := handler.NewActivityHandler(activitySvc)
 	enrollmentHandler := handler.NewEnrollmentHandler(enrollmentSvc)
@@ -190,6 +191,24 @@ func main() {
 			}
 			if result.Repaired > 0 {
 				log.Printf("[StockReconcile] repaired=%d checked=%d", result.Repaired, result.Checked)
+			}
+		})
+	}()
+
+	// ── Activity Auto-OFFLINE (SPRINT3 §三 task 8) ──────────────────────
+	go func() {
+		interval := time.Duration(cfg.ActivityOfflineMinutes) * time.Minute
+		if interval <= 0 {
+			interval = 15 * time.Minute
+		}
+		runPeriodicWithInitial(appCtx, interval, func(ctx context.Context) {
+			result, err := activityOfflineJob.Run(ctx)
+			if err != nil {
+				log.Printf("[ActivityOffline] scan error: %v", err)
+				return
+			}
+			if result.OfflineCount > 0 {
+				log.Printf("[ActivityOffline] %d activities transitioned to OFFLINE", result.OfflineCount)
 			}
 		})
 	}()
