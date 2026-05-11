@@ -1,16 +1,33 @@
 import { MapPin, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { trackBehavior } from '../../api/endpoints';
 import type { ActivityListItem } from '../../types';
 import { formatCurrency, formatDateRange } from '../../utils/formatters';
 import { StatusChip } from './StatusChip';
 
 export function SearchResultItem({ item }: { item: ActivityListItem }) {
   const { t } = useTranslation();
+  const handleTrackClick = () =>
+    trackBehavior(
+      {
+        activityId: item.id,
+        behaviorType: 'CLICK',
+        detail: {
+          source: 'public_search_results',
+          category: item.category,
+        },
+      },
+      { immediate: true, timeoutMs: 1000 },
+    );
 
   return (
     <article className="grid gap-5 border-b border-slate-100 py-6 last:border-b-0 lg:grid-cols-[220px_minmax(0,1fr)_180px]">
-      <Link to={`/activity/${item.id}`} className="block overflow-hidden rounded-[24px] bg-slate-100">
+      <Link
+        to={`/activity/${item.id}`}
+        onClick={handleTrackClick}
+        className="block overflow-hidden rounded-[24px] bg-slate-100"
+      >
         {item.coverUrl ? (
           <img src={item.coverUrl} alt={item.title} className="h-full w-full object-cover" />
         ) : (
@@ -25,7 +42,7 @@ export function SearchResultItem({ item }: { item: ActivityListItem }) {
             {t(`categories.${item.category}`)}
           </span>
         </div>
-        <Link to={`/activity/${item.id}`}>
+        <Link to={`/activity/${item.id}`} onClick={handleTrackClick}>
           <h3 className="text-2xl font-black leading-9 text-slate-900 transition hover:text-rose-600">
             {item.title}
           </h3>
@@ -69,6 +86,7 @@ export function SearchResultItem({ item }: { item: ActivityListItem }) {
 
         <Link
           to={`/activity/${item.id}`}
+          onClick={handleTrackClick}
           className="mt-6 inline-flex items-center justify-center rounded-full bg-white px-4 py-3 text-sm font-bold text-slate-900 shadow-sm transition hover:bg-rose-500 hover:text-white"
         >
           {t('public.viewDetails')}

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CheckCircle2, Clock3, CreditCard, ReceiptText } from 'lucide-react';
+import { CheckCircle2, Clock3, CreditCard, Loader2, ReceiptText, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { getActivityDetail, getOrderDetail, payOrder } from '../api/endpoints';
+import { cancelEnrollment, getActivityDetail, getOrderDetail, payOrder } from '../api/endpoints';
 import type { ActivityDetail, OrderItem } from '../types';
 import { formatExactCurrency, formatLongDate } from '../utils/formatters';
 
@@ -26,6 +26,7 @@ export default function OrderDetailPage() {
     message: string;
   } | null>(null);
   const [paying, setPaying] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -126,6 +127,38 @@ export default function OrderDetailPage() {
       });
     } finally {
       setPaying(false);
+    }
+  };
+
+  const handleCancelPending = async () => {
+    if (!order || cancelling) {
+      return;
+    }
+
+    const confirmed = window.confirm(t('orders.cancelConfirm'));
+    if (!confirmed) {
+      return;
+    }
+
+    setCancelling(true);
+    setFeedback(null);
+
+    try {
+      await cancelEnrollment(order.enrollmentId);
+      const nextOrder = await getOrderDetail(order.id);
+      setOrder(nextOrder);
+      setFeedback({
+        tone: 'success',
+        message: t('orders.cancelSuccess'),
+      });
+    } catch (err) {
+      const errorWithResponse = err as { response?: { data?: { message?: string } } };
+      setFeedback({
+        tone: 'error',
+        message: errorWithResponse.response?.data?.message || t('orders.cancelError'),
+      });
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -278,15 +311,26 @@ export default function OrderDetailPage() {
           </div>
 
           {canPay ? (
-            <button
-              type="button"
-              onClick={handlePay}
-              disabled={paying}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-rose-500 px-6 py-3 text-sm font-bold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <CreditCard size={16} />
-              {paying ? t('orders.paying') : t('orders.payNow')}
-            </button>
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={handlePay}
+                disabled={paying || cancelling}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-rose-500 px-6 py-3 text-sm font-bold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {paying ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
+                {paying ? t('orders.paying') : t('orders.payNow')}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleCancelPending()}
+                disabled={paying || cancelling}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-rose-200 bg-white px-6 py-3 text-sm font-bold text-rose-600 transition hover:border-rose-300 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {cancelling ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
+                {cancelling ? t('orders.cancelling') : t('orders.cancelPending')}
+              </button>
+            </div>
           ) : (
             <div className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-6 py-3 text-sm font-bold text-emerald-700">
               <CheckCircle2 size={16} />

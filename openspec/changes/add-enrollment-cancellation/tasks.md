@@ -10,9 +10,9 @@
 - [x] 2.2 在 `enrollment_handler.go` 中接入 `POST /api/v1/enrollments/{id}/cancel`。
 
 ## 3. 前端集成
-- [ ] 3.1 为 `/enrollments/{id}/cancel` 定义前端 API 封装。
-- [ ] 3.2 为 `QUEUING` 状态卡片增加“取消”按钮。
-- [ ] 3.3 为 `PENDING` 订单增加“取消”按钮，并补充确认提示，避免误操作。
+- [x] 3.1 为 `/enrollments/{id}/cancel` 定义前端 API 封装。
+- [x] 3.2 为 `QUEUING` 状态卡片增加“取消”按钮。
+- [x] 3.3 为 `PENDING` 订单增加“取消”按钮，并补充确认提示，避免误操作。
 
 ## 4. 测试
 - [x] 4.1 编写 Go table-test，验证乐观锁可以正确阻止重复取消导致的重复回补。

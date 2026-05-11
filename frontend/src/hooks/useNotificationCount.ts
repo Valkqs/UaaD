@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import { listNotifications } from '../api/endpoints';
+import { getUnreadNotificationCount } from '../api/endpoints';
 import { useAuth } from '../context/AuthContext';
-import { mergeNotificationReadState, subscribeNotificationState } from '../utils/notificationState';
+import { subscribeNotificationState } from '../utils/notificationState';
 
 export function useNotificationCount() {
   const { isAuthenticated, session } = useAuth();
   const [state, setState] = useState(() => ({
     count: 0,
-    isLoading: isAuthenticated,
+    isLoading: false,
   }));
 
   useEffect(() => {
@@ -18,13 +18,11 @@ export function useNotificationCount() {
     }
 
     const load = () =>
-      listNotifications()
-        .then((result) => {
-          const mergedItems = mergeNotificationReadState(result.list, session?.userId);
-
+      getUnreadNotificationCount()
+        .then((count) => {
           if (active) {
             setState({
-              count: mergedItems.filter((item) => !item.isRead).length,
+              count,
               isLoading: false,
             });
           }
@@ -38,15 +36,27 @@ export function useNotificationCount() {
           }
         });
 
-    void load();
-
-    const unsubscribe = subscribeNotificationState(session?.userId, () => {
+    const refresh = () => {
       void load();
-    });
+    };
+
+    refresh();
+
+    const unsubscribe = subscribeNotificationState(session?.userId, refresh);
+    const refreshOnVisible = () => {
+      if (document.visibilityState === 'visible') {
+        refresh();
+      }
+    };
+
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refreshOnVisible);
 
     return () => {
       active = false;
       unsubscribe();
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refreshOnVisible);
     };
   }, [isAuthenticated, session?.userId]);
 

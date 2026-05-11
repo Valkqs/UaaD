@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { MapPin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { trackBehavior } from '../../api/endpoints';
 import type { ActivityListItem } from '../../types';
 import { formatCurrency, formatDateRange } from '../../utils/formatters';
 import { StatusChip } from './StatusChip';
@@ -10,7 +11,23 @@ export function ActivityGridCard({ item }: { item: ActivityListItem }) {
 
   return (
     <article className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
-      <Link to={`/activity/${item.id}`} className="block">
+      <Link
+        to={`/activity/${item.id}`}
+        onClick={() =>
+          trackBehavior(
+            {
+              activityId: item.id,
+              behaviorType: 'CLICK',
+              detail: {
+                source: 'legacy_activity_grid',
+                category: item.category,
+              },
+            },
+            { immediate: true, timeoutMs: 1000 },
+          )
+        }
+        className="block"
+      >
         <div className="relative aspect-[4/5] overflow-hidden bg-slate-100">
           {item.coverUrl ? (
             <img src={item.coverUrl} alt={item.title} className="h-full w-full object-cover" />

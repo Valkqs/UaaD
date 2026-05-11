@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { CheckCircle2, Loader2, TicketX } from 'lucide-react';
+import { CheckCircle2, Loader2, TicketX, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { findOrderByOrderNo, getEnrollmentStatus } from '../api/endpoints';
+import { cancelEnrollment, findOrderByOrderNo, getEnrollmentStatus } from '../api/endpoints';
 import type { EnrollmentStatusItem, OrderItem } from '../types';
 import { formatLongDate } from '../utils/formatters';
 
@@ -15,6 +15,11 @@ export default function EnrollStatusPage() {
   const [order, setOrder] = useState<OrderItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [actionMessage, setActionMessage] = useState<{
+    tone: 'success' | 'error';
+    text: string;
+  } | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     if (!Number.isFinite(enrollmentId)) {
@@ -69,6 +74,39 @@ export default function EnrollStatusPage() {
     };
   }, [enrollmentId, t]);
 
+  const handleCancel = async () => {
+    if (!status || cancelling) {
+      return;
+    }
+
+    const confirmed = window.confirm(t('enrollStatus.cancelConfirm'));
+    if (!confirmed) {
+      return;
+    }
+
+    setCancelling(true);
+    setActionMessage(null);
+
+    try {
+      await cancelEnrollment(status.enrollmentId);
+      const nextStatus = await getEnrollmentStatus(status.enrollmentId);
+      setStatus(nextStatus);
+      setOrder(null);
+      setActionMessage({
+        tone: 'success',
+        text: t('enrollStatus.cancelSuccess'),
+      });
+    } catch (err) {
+      const errorWithResponse = err as { response?: { data?: { message?: string } } };
+      setActionMessage({
+        tone: 'error',
+        text: errorWithResponse.response?.data?.message || t('enrollStatus.cancelError'),
+      });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="mx-auto max-w-3xl rounded-[32px] border border-rose-100 bg-white px-6 py-14 text-center shadow-sm">
@@ -114,6 +152,17 @@ export default function EnrollStatusPage() {
             <Loader2 className="mx-auto animate-spin text-rose-500" size={28} />
             <h3 className="mt-4 text-2xl font-black text-slate-900">{t('enrollStatus.queueTitle')}</h3>
             <p className="mt-3 text-sm leading-7 text-slate-500">{t('enrollStatus.queueDescription')}</p>
+            {actionMessage ? (
+              <div
+                className={`mt-5 rounded-2xl px-4 py-3 text-sm ${
+                  actionMessage.tone === 'success'
+                    ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : 'border border-amber-200 bg-amber-50 text-amber-700'
+                }`}
+              >
+                {actionMessage.text}
+              </div>
+            ) : null}
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <div className="rounded-[24px] border border-rose-100 bg-[#fff8f3] p-5">
                 <p className="text-sm font-semibold text-slate-400">{t('enrollStatus.queuePosition')}</p>
@@ -128,6 +177,15 @@ export default function EnrollStatusPage() {
                 </p>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() => void handleCancel()}
+              disabled={cancelling}
+              className="mt-6 inline-flex items-center justify-center gap-2 rounded-full border border-rose-200 bg-white px-5 py-3 text-sm font-bold text-rose-600 transition hover:border-rose-300 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {cancelling ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
+              {cancelling ? t('enrollStatus.cancelling') : t('enrollStatus.cancelQueue')}
+            </button>
           </div>
         ) : status.status === 'SUCCESS' ? (
           <div className="text-center">

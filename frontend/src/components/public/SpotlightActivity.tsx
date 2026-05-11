@@ -1,6 +1,7 @@
 import { CalendarRange, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { trackBehavior } from '../../api/endpoints';
 import type { RecommendationSectionItem, HomeSpotlightItem } from '../../types';
 import { formatLongDate } from '../../utils/formatters';
 
@@ -96,6 +97,19 @@ export function SpotlightActivity({ item, mirrored = false }: SpotlightActivityP
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
                 to={getHref(item)}
+                onClick={() =>
+                  trackBehavior(
+                    {
+                      activityId: item.id,
+                      behaviorType: 'CLICK',
+                      detail: {
+                        source: 'home_spotlight',
+                        category: item.category,
+                      },
+                    },
+                    { immediate: true, timeoutMs: 1000 },
+                  )
+                }
                 className="rounded-full bg-rose-600 px-6 py-2.5 text-sm font-bold !text-white shadow-[0_18px_36px_-22px_rgba(244,63,94,0.9)] transition hover:bg-rose-700 hover:!text-white visited:!text-white"
                 style={{ color: '#ffffff' }}
               >

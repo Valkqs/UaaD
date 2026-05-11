@@ -1,8 +1,8 @@
 import { Search } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { listActivities, getHotRecommendations } from '../api/endpoints';
+import { getHotRecommendations, listActivities, trackBehavior } from '../api/endpoints';
 import { EmptyState } from '../components/public/EmptyState';
 import { LoadingCards } from '../components/public/LoadingCards';
 import { Pagination } from '../components/public/Pagination';
@@ -46,6 +46,7 @@ export default function PublicActivitiesPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const reportedSearchRef = useRef<string | null>(null);
 
   const filters = useMemo(
     () => readParams(searchParams, preferredCity),
@@ -81,6 +82,55 @@ export default function PublicActivitiesPage() {
         setItems(result.list);
         setTotal(result.total);
         setRecommendations(hotList);
+
+        const hasSearchFilters = Boolean(
+          filters.keyword.trim() ||
+            filters.artist.trim() ||
+            filters.region !== 'ALL' ||
+            filters.category !== 'ALL' ||
+            filters.sort !== DEFAULT_ACTIVITY_SEARCH.sort,
+        );
+        const searchSignature = hasSearchFilters
+          ? JSON.stringify({
+              keyword: filters.keyword.trim(),
+              artist: filters.artist.trim(),
+              region: filters.region,
+              category: filters.category,
+              sort: filters.sort,
+            })
+          : '';
+
+        if (!hasSearchFilters) {
+          reportedSearchRef.current = null;
+        }
+
+        if (
+          hasSearchFilters &&
+          reportedSearchRef.current !== searchSignature
+        ) {
+          const behaviorTargetId = result.list[0]?.id ?? hotList[0]?.id ?? null;
+
+          if (behaviorTargetId === null) {
+            return;
+          }
+
+          reportedSearchRef.current = searchSignature;
+          trackBehavior(
+            {
+              activityId: behaviorTargetId,
+              behaviorType: 'SEARCH',
+              detail: {
+                keyword: filters.keyword.trim(),
+                artist: filters.artist.trim(),
+                region: filters.region,
+                category: filters.category,
+                sort: filters.sort,
+                result_count: result.total,
+              },
+            },
+            { immediate: true, timeoutMs: 1000 },
+          );
+        }
       } catch {
         if (!active) {
           return;

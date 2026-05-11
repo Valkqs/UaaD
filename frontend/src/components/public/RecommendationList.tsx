@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { trackBehavior } from '../../api/endpoints';
 import type { RecommendationSectionItem } from '../../types';
 import { formatCurrency, formatDateRange } from '../../utils/formatters';
 
@@ -49,6 +50,19 @@ export function RecommendationList({
             <Link
               key={item.id}
               to={`/activities?keyword=${encodeURIComponent(item.title)}`}
+              onClick={() =>
+                trackBehavior(
+                  {
+                    activityId: item.id,
+                    behaviorType: 'CLICK',
+                    detail: {
+                      source: 'recommendation_sidebar',
+                      category: item.category,
+                    },
+                  },
+                  { immediate: true, timeoutMs: 1000 },
+                )
+              }
               className="flex gap-4 rounded-2xl border border-slate-100 p-3 transition hover:border-rose-100 hover:bg-rose-50/50"
             >
               <div className="h-24 w-20 shrink-0 overflow-hidden rounded-2xl bg-slate-100">

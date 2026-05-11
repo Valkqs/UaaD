@@ -1,5 +1,6 @@
 import api from '../axios';
 import type {
+  CancelEnrollmentResult,
   CreateEnrollmentResult,
   EnrollmentListItem,
   EnrollmentListResult,
@@ -44,6 +45,11 @@ interface BackendEnrollmentStatusData {
   submitted_at?: string;
   finalized_at?: string;
   order_no?: string;
+}
+
+interface BackendCancelEnrollmentData {
+  enrollment_id: number;
+  status: EnrollmentStatus;
 }
 
 interface BackendEnrollmentListItem {
@@ -102,6 +108,18 @@ export async function getEnrollmentStatus(enrollmentId: number): Promise<Enrollm
     submittedAt: data.submitted_at,
     finalizedAt: data.finalized_at,
     orderNo: data.order_no,
+  };
+}
+
+export async function cancelEnrollment(enrollmentId: number): Promise<CancelEnrollmentResult> {
+  const response = await api.post<ApiResponse<BackendCancelEnrollmentData>>(
+    `/enrollments/${enrollmentId}/cancel`,
+  );
+  const data = response.data.data;
+
+  return {
+    enrollmentId: data.enrollment_id,
+    status: data.status,
   };
 }
 

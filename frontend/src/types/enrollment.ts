@@ -52,3 +52,8 @@ export interface EnrollmentStatusItem {
   finalizedAt?: string;
   orderNo?: string;
 }
+
+export interface CancelEnrollmentResult {
+  enrollmentId: number;
+  status: EnrollmentStatus;
+}

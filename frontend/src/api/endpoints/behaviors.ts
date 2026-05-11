@@ -1,4 +1,5 @@
-import api from '../axios';
+import api, { AUTH_REDIRECT_BYPASS_HEADER } from '../axios';
+import { getStoredAuthSession } from '../../utils/auth';
 
 export type BehaviorType = 'VIEW' | 'COLLECT' | 'SHARE' | 'CLICK' | 'SEARCH';
 
@@ -32,9 +33,16 @@ interface BehaviorAcceptedResponse {
 const DEFAULT_TIMEOUT_MS = 1200;
 const BATCH_SIZE = 10;
 const FLUSH_INTERVAL_MS = 60_000;
+const BEHAVIOR_REQUEST_HEADERS = {
+  [AUTH_REDIRECT_BYPASS_HEADER]: '1',
+} as const;
 
 let behaviorQueue: BehaviorEventPayload[] = [];
 let flushTimer: number | null = null;
+
+function hasBehaviorSession() {
+  return Boolean(getStoredAuthSession()?.token);
+}
 
 function toBackendPayload(payload: BehaviorEventPayload) {
   return {
@@ -53,18 +61,28 @@ function clearFlushTimer() {
 }
 
 async function postSingleBehavior(payload: BehaviorEventPayload, timeoutMs = DEFAULT_TIMEOUT_MS) {
+  if (!hasBehaviorSession()) {
+    return;
+  }
+
   await api.post<BackendPayload<BehaviorAcceptedResponse>>('/behaviors', toBackendPayload(payload), {
     timeout: timeoutMs,
+    headers: BEHAVIOR_REQUEST_HEADERS,
   });
 }
 
 async function postBatchBehaviors(payloads: BehaviorEventPayload[], timeoutMs = DEFAULT_TIMEOUT_MS) {
+  if (!hasBehaviorSession()) {
+    return;
+  }
+
   const request: BehaviorBatchRequest = {
     behaviors: payloads.map(toBackendPayload),
   };
 
   await api.post<BackendPayload<BehaviorAcceptedResponse>>('/behaviors/batch', request, {
     timeout: timeoutMs,
+    headers: BEHAVIOR_REQUEST_HEADERS,
   });
 }
 
@@ -102,7 +120,7 @@ export function trackBehavior(
   payload: BehaviorEventPayload,
   options: { immediate?: boolean; timeoutMs?: number } = {},
 ) {
-  if (!payload.activityId || payload.activityId <= 0) {
+  if (!payload.activityId || payload.activityId <= 0 || !hasBehaviorSession()) {
     return;
   }
 

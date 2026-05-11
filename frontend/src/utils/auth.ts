@@ -26,13 +26,22 @@ function readStoredNumber(...values: Array<number | null | undefined>) {
   return typeof matched === 'number' ? matched : null;
 }
 
+function getLocalStorage(): Storage | null {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return null;
+  }
+
+  return window.localStorage;
+}
+
 export function getStoredAuthSession(): AuthSession | null {
-  if (typeof window === 'undefined') {
+  const storage = getLocalStorage();
+  if (!storage) {
     return null;
   }
 
   try {
-    const rawSession = window.localStorage.getItem(AUTH_STORAGE_KEY);
+    const rawSession = storage.getItem(AUTH_STORAGE_KEY);
     if (rawSession) {
       const parsedSession = JSON.parse(rawSession) as StoredAuthSession;
       if (typeof parsedSession.token === 'string' && parsedSession.token) {
@@ -51,10 +60,10 @@ export function getStoredAuthSession(): AuthSession | null {
       }
     }
   } catch {
-    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    storage.removeItem(AUTH_STORAGE_KEY);
   }
 
-  const legacyToken = window.localStorage.getItem(LEGACY_TOKEN_KEY);
+  const legacyToken = storage.getItem(LEGACY_TOKEN_KEY);
   if (!legacyToken) {
     return null;
   }
@@ -69,21 +78,23 @@ export function getStoredAuthSession(): AuthSession | null {
 }
 
 export function setStoredAuthSession(session: AuthSession) {
-  if (typeof window === 'undefined') {
+  const storage = getLocalStorage();
+  if (!storage) {
     return;
   }
 
-  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
-  window.localStorage.setItem(LEGACY_TOKEN_KEY, session.token);
+  storage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+  storage.setItem(LEGACY_TOKEN_KEY, session.token);
 }
 
 export function clearStoredAuthSession() {
-  if (typeof window === 'undefined') {
+  const storage = getLocalStorage();
+  if (!storage) {
     return;
   }
 
-  window.localStorage.removeItem(AUTH_STORAGE_KEY);
-  window.localStorage.removeItem(LEGACY_TOKEN_KEY);
+  storage.removeItem(AUTH_STORAGE_KEY);
+  storage.removeItem(LEGACY_TOKEN_KEY);
 }
 
 export function getDefaultAuthenticatedPath(role?: AuthRole | null) {

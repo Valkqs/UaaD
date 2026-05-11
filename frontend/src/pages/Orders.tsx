@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Clock3, CreditCard, ReceiptText } from 'lucide-react';
+import { ChevronRight, Clock3, CreditCard, Loader2, ReceiptText, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { listOrders } from '../api/endpoints';
+import { cancelEnrollment, getOrderDetail, listOrders } from '../api/endpoints';
 import type { OrderItem } from '../types';
 import { formatExactCurrency, formatLongDate } from '../utils/formatters';
 
@@ -18,6 +18,11 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [busyOrderId, setBusyOrderId] = useState<number | null>(null);
+  const [actionMessage, setActionMessage] = useState<{
+    tone: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -47,6 +52,36 @@ export default function OrdersPage() {
       active = false;
     };
   }, [t]);
+
+  const handleCancelOrder = async (order: OrderItem) => {
+    const confirmed = window.confirm(t('orders.cancelConfirm'));
+    if (!confirmed) {
+      return;
+    }
+
+    setBusyOrderId(order.id);
+    setActionMessage(null);
+
+    try {
+      await cancelEnrollment(order.enrollmentId);
+      const nextOrder = await getOrderDetail(order.id);
+      setOrders((current) =>
+        current.map((item) => (item.id === order.id ? nextOrder : item)),
+      );
+      setActionMessage({
+        tone: 'success',
+        text: t('orders.cancelSuccess'),
+      });
+    } catch (err) {
+      const errorWithResponse = err as { response?: { data?: { message?: string } } };
+      setActionMessage({
+        tone: 'error',
+        text: errorWithResponse.response?.data?.message || t('orders.cancelError'),
+      });
+    } finally {
+      setBusyOrderId(null);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 pb-12">
@@ -92,6 +127,17 @@ export default function OrdersPage() {
         </div>
       ) : (
         <div className="space-y-4">
+          {actionMessage ? (
+            <div
+              className={`rounded-[24px] px-5 py-4 text-sm ${
+                actionMessage.tone === 'success'
+                  ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : 'border border-amber-200 bg-amber-50 text-amber-700'
+              }`}
+            >
+              {actionMessage.text}
+            </div>
+          ) : null}
           {orders.map((order) => (
             <article
               key={order.id}
@@ -130,13 +176,28 @@ export default function OrdersPage() {
 
               <div className="mt-5 flex flex-wrap justify-end gap-3">
                 {order.status === 'PENDING' ? (
-                  <Link
-                    to={`/orders/${order.id}`}
-                    className="inline-flex items-center gap-2 rounded-full bg-rose-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-rose-600"
-                  >
-                    <CreditCard size={16} />
-                    {t('orders.payNow')}
-                  </Link>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => void handleCancelOrder(order)}
+                      disabled={busyOrderId === order.id}
+                      className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-bold text-rose-600 transition hover:border-rose-300 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {busyOrderId === order.id ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <XCircle size={16} />
+                      )}
+                      {busyOrderId === order.id ? t('orders.cancelling') : t('orders.cancelPending')}
+                    </button>
+                    <Link
+                      to={`/orders/${order.id}`}
+                      className="inline-flex items-center gap-2 rounded-full bg-rose-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-rose-600"
+                    >
+                      <CreditCard size={16} />
+                      {t('orders.payNow')}
+                    </Link>
+                  </>
                 ) : null}
                 <Link
                   to={`/orders/${order.id}`}
