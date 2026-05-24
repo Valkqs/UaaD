@@ -28,5 +28,6 @@ func NewKafkaReader(cfg *config.Config) *kafka.Reader {
 		MinBytes:       1,
 		MaxBytes:       10e6, // 10 MB
 		CommitInterval: time.Second,
+		StartOffset:    kafka.FirstOffset, // read from earliest when no committed offset exists
 	})
 }

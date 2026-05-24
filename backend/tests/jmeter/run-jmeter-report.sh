@@ -10,6 +10,7 @@
 #   bash run-jmeter-report.sh 1000
 #   bash run-jmeter-report.sh 3000
 #   bash run-jmeter-report.sh 5000
+#   bash run-jmeter-report.sh 10000       # 万级：10000 独立用户各报名一次
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,11 +19,12 @@ cd "$here"
 # ── thread count ──────────────────────────────────────────────────────────
 thread_count="${1:-1000}"
 case "$thread_count" in
-  1000) rampup=30 ;;
-  3000) rampup=60 ;;
-  5000) rampup=90 ;;
+  1000)  rampup=30 ;;
+  3000)  rampup=60 ;;
+  5000)  rampup=90 ;;
+  10000) rampup=60 ;;
   *)
-    echo "Usage: $0 [1000|3000|5000]"
+    echo "Usage: $0 [1000|3000|5000|10000]"
     echo "  Invalid thread count: ${thread_count}"
     exit 1
     ;;
