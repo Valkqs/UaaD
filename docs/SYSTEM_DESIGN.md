@@ -662,6 +662,27 @@ erDiagram
 
 ---
 
+#### `PUT /activities/:id/preheat` — 设为预热（B 端）
+
+| 属性 | 说明 |
+|---|---|
+| **认证** | Need Bearer Token (role=MERCHANT) |
+| **业务逻辑** | 仅活动创建者可操作；状态从 `DRAFT` → `PREHEAT`；不触发 Redis 库存预热，仍允许继续编辑库存和报名开始时间 |
+
+**响应 200：**
+```json
+{
+  "code": 0,
+  "message": "活动已进入预热状态",
+  "data": {
+    "activity_id": 1,
+    "status": "PREHEAT"
+  }
+}
+```
+
+---
+
 #### `PUT /activities/:id/publish` — 上架活动（B 端）
 
 | 属性 | 说明 |

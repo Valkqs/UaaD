@@ -23,6 +23,7 @@ func RegisterActivityRoutes(v1 *gin.RouterGroup, h *ActivityHandler, jwtSecret s
 		{
 			auth.POST("", h.Create)
 			auth.PUT("/:id", h.Update)
+			auth.PUT("/:id/preheat", h.Preheat)
 			auth.PUT("/:id/publish", h.Publish)
 		}
 	}

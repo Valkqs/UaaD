@@ -79,6 +79,36 @@ func (h *ActivityHandler) Update(c *gin.Context) {
 	response.Success(c, gin.H{"message": "更新成功"})
 }
 
+// Preheat handles PUT /api/v1/activities/:id/preheat.
+func (h *ActivityHandler) Preheat(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "无效的活动 ID")
+		return
+	}
+
+	merchantID := getUserID(c)
+	activity, err := h.svc.Preheat(id, merchantID)
+	if err != nil {
+		switch err {
+		case service.ErrActivityNotFound:
+			response.NotFound(c, "活动不存在")
+		case service.ErrNotActivityOwner:
+			response.Forbidden(c, "无权操作此活动")
+		case service.ErrInvalidActivityState:
+			response.BadRequest(c, "当前状态不允许设为预热（仅 DRAFT 可进入 PREHEAT）")
+		default:
+			response.InternalError(c, "设为预热失败")
+		}
+		return
+	}
+
+	response.Success(c, gin.H{
+		"activity_id": activity.ID,
+		"status":      activity.Status,
+	})
+}
+
 // Publish handles PUT /api/v1/activities/:id/publish.
 func (h *ActivityHandler) Publish(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)

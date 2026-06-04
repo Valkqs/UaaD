@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { PenLine, PlusCircle, Rocket, RotateCcw } from 'lucide-react';
+import { Flame, PenLine, PlusCircle, Rocket, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { listMerchantActivities, publishMerchantActivity } from '../api/endpoints';
+import { listMerchantActivities, preheatMerchantActivity, publishMerchantActivity } from '../api/endpoints';
 import type { ActivityListItem } from '../types';
 import { MerchantNotice } from '../components/merchant/MerchantNotice';
 import { MerchantPageHeader } from '../components/merchant/MerchantPageHeader';
@@ -18,6 +18,7 @@ export default function MerchantActivitiesPage() {
   const [items, setItems] = useState<ActivityListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [preheatingId, setPreheatingId] = useState<number | null>(null);
   const [publishingId, setPublishingId] = useState<number | null>(null);
   const [notice, setNotice] = useState<{
     tone: 'success' | 'error' | 'info';
@@ -75,8 +76,25 @@ export default function MerchantActivitiesPage() {
   }, [load]);
 
   const canPublish = (status: ActivityListItem['status']) => status === 'DRAFT' || status === 'PREHEAT';
+  const canPreheat = (status: ActivityListItem['status']) => status === 'DRAFT';
   const isPublishedStatus = (status: ActivityListItem['status']) =>
     ['PUBLISHED', 'SELLING_OUT', 'SOLD_OUT'].includes(status);
+  const isMutating = preheatingId !== null || publishingId !== null;
+  const getPreheatLabel = (item: ActivityListItem) => {
+    if (preheatingId === item.id) {
+      return t('merchant.preheating');
+    }
+
+    if (item.status === 'PREHEAT') {
+      return t('merchant.preheatedAction');
+    }
+
+    if (canPreheat(item.status)) {
+      return t('merchant.preheat');
+    }
+
+    return t('merchant.preheatUnavailable');
+  };
   const getPublishLabel = (item: ActivityListItem) => {
     if (publishingId === item.id) {
       return t('merchant.publishing');
@@ -93,8 +111,48 @@ export default function MerchantActivitiesPage() {
     return t('merchant.publishUnavailable');
   };
 
+  const handlePreheat = async (item: ActivityListItem) => {
+    if (!canPreheat(item.status) || isMutating) {
+      return;
+    }
+
+    setPreheatingId(item.id);
+    setNotice(null);
+
+    try {
+      const result = await preheatMerchantActivity(item.id);
+      setItems((current) =>
+        current.map((currentItem) =>
+          currentItem.id === item.id
+            ? {
+                ...currentItem,
+                status: result.status,
+              }
+            : currentItem,
+        ),
+      );
+      setNotice({
+        tone: 'success',
+        title: t('merchant.preheatSuccessTitle'),
+        message: result.message || t('merchant.preheatSuccess'),
+      });
+      void load();
+    } catch (error) {
+      setNotice({
+        tone: 'error',
+        title: t('merchant.preheatFailedTitle'),
+        message: resolveApiErrorMessage(error, {
+          fallback: t('merchant.preheatFailed'),
+          networkFallback: t('merchant.networkError'),
+        }),
+      });
+    } finally {
+      setPreheatingId(null);
+    }
+  };
+
   const handlePublish = async (item: ActivityListItem) => {
-    if (!canPublish(item.status) || publishingId !== null) {
+    if (!canPublish(item.status) || isMutating) {
       return;
     }
 
@@ -243,7 +301,16 @@ export default function MerchantActivitiesPage() {
                   </Link>
                   <button
                     type="button"
-                    disabled={!canPublish(item.status) || publishingId !== null}
+                    disabled={!canPreheat(item.status) || isMutating}
+                    onClick={() => void handlePreheat(item)}
+                    className="inline-flex items-center gap-1 rounded-full border border-amber-100 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700 transition hover:border-amber-200 hover:bg-amber-100 disabled:cursor-not-allowed disabled:border-slate-100 disabled:bg-slate-100 disabled:text-slate-400"
+                  >
+                    <Flame size={12} />
+                    {getPreheatLabel(item)}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!canPublish(item.status) || isMutating}
                     onClick={() => void handlePublish(item)}
                     className="inline-flex items-center gap-1 rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
                   >
@@ -288,7 +355,16 @@ export default function MerchantActivitiesPage() {
                         </Link>
                         <button
                           type="button"
-                          disabled={!canPublish(item.status) || publishingId !== null}
+                          disabled={!canPreheat(item.status) || isMutating}
+                          onClick={() => void handlePreheat(item)}
+                          className="inline-flex items-center gap-1 rounded-full border border-amber-100 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700 transition hover:border-amber-200 hover:bg-amber-100 disabled:cursor-not-allowed disabled:border-slate-100 disabled:bg-slate-100 disabled:text-slate-400"
+                        >
+                          <Flame size={12} />
+                          {getPreheatLabel(item)}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!canPublish(item.status) || isMutating}
                           onClick={() => void handlePublish(item)}
                           className="inline-flex items-center gap-1 rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
                         >

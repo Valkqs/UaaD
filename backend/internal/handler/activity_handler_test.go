@@ -21,6 +21,8 @@ type stubActivityService struct {
 	createResult       uint64
 	createErr          error
 	updateErr          error
+	preheatResult      *domain.Activity
+	preheatErr         error
 	publishResult      *domain.Activity
 	publishErr         error
 	listResult         []domain.Activity
@@ -52,6 +54,15 @@ func (s *stubActivityService) Update(activityID, merchantID uint64, req service.
 	s.lastActivityID = activityID
 	s.lastMerchantID = merchantID
 	return s.updateErr
+}
+
+func (s *stubActivityService) Preheat(activityID, merchantID uint64) (*domain.Activity, error) {
+	s.lastActivityID = activityID
+	s.lastMerchantID = merchantID
+	if s.preheatErr != nil {
+		return nil, s.preheatErr
+	}
+	return s.preheatResult, nil
 }
 
 func (s *stubActivityService) Publish(activityID, merchantID uint64) (*domain.Activity, error) {
@@ -301,6 +312,60 @@ func TestActivityHandler_Update_Published(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPut, "/api/v1/activities/123", bytes.NewReader([]byte("{}")))
 	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("want 400, got %d", w.Code)
+	}
+}
+
+func TestActivityHandler_Preheat_OK(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	stub := &stubActivityService{
+		preheatResult: &domain.Activity{ID: 123, Status: "PREHEAT"},
+	}
+	h := NewActivityHandler(stub)
+
+	r := gin.New()
+	r.PUT("/api/v1/activities/:id/preheat", func(c *gin.Context) {
+		c.Set("user_id", uint64(99))
+		h.Preheat(c)
+	})
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/activities/123/preheat", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", w.Code)
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	if data["status"] != "PREHEAT" {
+		t.Errorf("want status=PREHEAT, got %v", data["status"])
+	}
+	if stub.lastActivityID != 123 || stub.lastMerchantID != 99 {
+		t.Errorf("want activity=123 merchant=99, got activity=%d merchant=%d", stub.lastActivityID, stub.lastMerchantID)
+	}
+}
+
+func TestActivityHandler_Preheat_InvalidState(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	stub := &stubActivityService{preheatErr: service.ErrInvalidActivityState}
+	h := NewActivityHandler(stub)
+
+	r := gin.New()
+	r.PUT("/api/v1/activities/:id/preheat", func(c *gin.Context) {
+		c.Set("user_id", uint64(99))
+		h.Preheat(c)
+	})
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/activities/123/preheat", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 

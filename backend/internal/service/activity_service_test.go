@@ -68,6 +68,29 @@ func TestActivityStateTransition(t *testing.T) {
 	}
 }
 
+func TestPreheatStateTransition(t *testing.T) {
+	tests := []struct {
+		from    string
+		allowed bool
+	}{
+		{"DRAFT", true},
+		{"PREHEAT", false},
+		{"PUBLISHED", false},
+		{"SELLING_OUT", false},
+		{"SOLD_OUT", false},
+		{"OFFLINE", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.from, func(t *testing.T) {
+			canPreheat := tt.from == "DRAFT"
+			if canPreheat != tt.allowed {
+				t.Errorf("from %s: got canPreheat=%v, want %v", tt.from, canPreheat, tt.allowed)
+			}
+		})
+	}
+}
+
 func TestPublishedFieldLock(t *testing.T) {
 	tests := []struct {
 		status string

@@ -331,6 +331,13 @@ export async function updateMerchantActivity(
   return normalizeMerchantMutationResult(response.data.data, response.data.message);
 }
 
+export async function preheatMerchantActivity(id: number): Promise<MerchantMutationResult> {
+  const response = await api.put<BackendSinglePayload<BackendMerchantMutationPayload>>(
+    `/activities/${id}/preheat`,
+  );
+  return normalizeMerchantMutationResult(response.data.data, response.data.message);
+}
+
 export async function publishMerchantActivity(id: number): Promise<MerchantMutationResult> {
   const response = await api.put<BackendSinglePayload<BackendMerchantMutationPayload>>(
     `/activities/${id}/publish`,
