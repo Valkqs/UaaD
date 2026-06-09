@@ -79,4 +79,5 @@ homework/
 /.claude/skills/openspec-apply-change/
 /.claude/skills/openspec-archive-change/
 /.claude/skills/openspec-explore/
-/.claude/skills/openspec-propose/
+/.claude/skills/openspec-propose/backend/.omc/
+.omc/
