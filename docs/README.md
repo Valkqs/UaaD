@@ -3,7 +3,7 @@
 > 面向开发者、AI Agent、负责人使用的统一文档入口。
 > 文档按“长期真理源 / 操作手册 / 阶段记录 / 治理规则”分组，减少在多个入口重复维护同一份说明。
 
-**最后更新：2026-04-21**
+**最后更新：2026-06-10**
 
 ---
 
@@ -60,6 +60,7 @@
 | [SPRINT2.md](./SPRINT2.md) | Sprint 2 记录 |
 | [SPRINT3.md](./SPRINT3.md) | Sprint 3 记录 |
 | [SPRINT5.md](./SPRINT5.md) | Sprint 5 安全测试、实机运行演示与抗压能力展示 |
+| [SPRINT6.md](./SPRINT6.md) | Sprint 6 最终总结、缺陷反思、课程建议与配套材料汇总 |
 | [wbs.puml](./wbs.puml) | 工作分解结构图 |
 | [../backend/task.md](../backend/task.md) | 后端任务清单 |
 | [../frontend/task.md](../frontend/task.md) | 前端任务清单 |
